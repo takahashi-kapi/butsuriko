@@ -125,7 +125,7 @@ def smart_place(board, stone):
 
     return best_move
 
-class ButsurikoAI(object):
+class OnigiriAI(object):
 
     def face(self):
         return "🍙"
