@@ -61,22 +61,32 @@ def smart_place(board, stone):
     return: (x, y) 次に置く座標
     """
     directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    
+    # 位置重要度マップ (6x6)
+    importance_map = [
+        [100, -20, 10, 10, -20, 100],
+        [-20, -50, -5, -5, -50, -20],
+        [10,  -5,   1,  1,  -5,  10],
+        [10,  -5,   1,  1,  -5,  10],
+        [-20, -50, -5, -5, -50, -20],
+        [100, -20, 10, 10, -20, 100],
+    ]
 
     def evaluate(board, stone):
         """
-        簡単な評価関数。角を優先し、全体の石数も考慮。
+        改良版評価関数: 石の数、角、位置重要度を考慮。
         """
-        corner_positions = [(0, 0), (0, len(board[0]) - 1), (len(board) - 1, 0), (len(board) - 1, len(board[0]) - 1)]
+        opponent = 3 - stone
         score = 0
 
-        # 石の数をカウント
-        score += sum(row.count(stone) for row in board)
-
-        # 角を評価
-        for x, y in corner_positions:
-            if board[y][x] == stone:
-                score += 10  # 角の価値を高く設定
-
+        # 位置重要度を加味したスコア計算
+        for y in range(len(board)):
+            for x in range(len(board[0])):
+                if board[y][x] == stone:
+                    score += importance_map[y][x]
+                elif board[y][x] == opponent:
+                    score -= importance_map[y][x]
+        
         return score
 
     def simulate_move(board, stone, x, y):
@@ -102,23 +112,25 @@ def smart_place(board, stone):
 
         return new_board
 
-    # 全ての有効な手を探索
-    valid_moves = []
-    for y in range(len(board)):
-        for x in range(len(board[0])):
-            if can_place_x_y(board, stone, x, y):
-                valid_moves.append((x, y))
-
+    # 有効な手を探索
+    valid_moves = [(x, y) for y in range(len(board)) for x in range(len(board[0])) if can_place_x_y(board, stone, x, y)]
     if not valid_moves:
         return None  # 置ける場所がない場合
 
-    # 最良の手を見つける
+    # ミニマックスで最良の手を探索
     best_move = None
     best_score = -math.inf
 
     for x, y in valid_moves:
-        new_board = simulate_move(board, stone, x, y)
-        score = evaluate(new_board, stone)
+        simulated_board = simulate_move(board, stone, x, y)
+        score = evaluate(simulated_board, stone)
+        # 相手の応手をシミュレーション
+        opponent_best_score = -math.inf
+        for ox, oy in [(ox, oy) for oy in range(len(board)) for ox in range(len(board[0])) if can_place_x_y(simulated_board, 3 - stone, ox, oy)]:
+            opponent_board = simulate_move(simulated_board, 3 - stone, ox, oy)
+            opponent_best_score = max(opponent_best_score, evaluate(opponent_board, 3 - stone))
+        score -= opponent_best_score * 0.5  # 相手の次善手の影響を軽減
+
         if score > best_score:
             best_score = score
             best_move = (x, y)
@@ -133,6 +145,4 @@ class OnigiriAI(object):
     def place(self, board, stone):
         x, y = smart_place(board, stone)  # 賢い配置を使用
         return x, y
-
-
 
