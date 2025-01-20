@@ -128,7 +128,7 @@ def smart_place(board, stone):
 class ButsurikoAI(object):
 
     def face(self):
-        return "🐰"
+        return "🍙"
 
     def place(self, board, stone):
         x, y = smart_place(board, stone)  # 賢い配置を使用
